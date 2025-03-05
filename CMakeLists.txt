@@ -8,6 +8,7 @@ project(
 	LANGUAGES C
 )
 
+option(REDIS_ENABLE_LTO "Turn on compiler Link Time Optimizations" OFF)
 option(REDIS_ENABLE_TLS "Build Redis with TLS support" OFF)
 option(REDIS_ENABLE_SYSTEMD "Build Redis with systemd support" OFF)
 option(REDIS_ENABLE_JEMALLOC "Set jemalloc as the memory allocation API" OFF)
@@ -16,6 +17,7 @@ set(BUILD_TLS "no")
 set(USE_SYSTEMD "no")
 set(MALLOC "libc")
 set(CFLAGS "${CMAKE_C_FLAGS}")
+set(LDFLAGS "")
 set(OPT "${CMAKE_C_FLAGS}")
 
 if (REDIS_ENABLE_TLS)
@@ -30,14 +32,22 @@ if (REDIS_ENABLE_JEMALLOC)
 	set(MALLOC "jemalloc")
 endif()
 
+if (REDIS_ENABLE_LTO)
+	set(CFLAGS "${CFLAGS} ${CMAKE_C_COMPILE_OPTIONS_IPO}")
+	set(LDFLAGS "${LDFLAGS} ${CMAKE_C_COMPILE_OPTIONS_IPO}")
+endif()
+
+string(REPLACE ";" " " CFLAGS "${CFLAGS}")
+string(REPLACE ";" " " LDFLAGS "${LDFLAGS}")
+
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "MinSizeRel")
-	set(OPT "${CMAKE_C_FLAGS_MINSIZEREL} -Wl,-s")
+	set(OPT "${OPT} ${CMAKE_C_FLAGS_MINSIZEREL} -Wl,-s")
 elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
-	set(OPT "${CMAKE_C_FLAGS_RELEASE} -Wl,-s")
+	set(OPT "${OPT} ${CMAKE_C_FLAGS_RELEASE} -Wl,-s")
 elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-	set(OPT "${CMAKE_C_FLAGS_DEBUG}")
+	set(OPT "${OPT} ${CMAKE_C_FLAGS_DEBUG}")
 elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
-	set(OPT "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+	set(OPT "${OPT} ${CMAKE_C_FLAGS_RELWITHDEBINFO}")
 endif()
 
 set(REDIS_SOURCE_DIRECTORY "${CMAKE_SOURCE_DIR}/submodules/redis")
@@ -69,6 +79,7 @@ set(
 	"MALLOC=${MALLOC}"
 	"OPT=${OPT}"
 	"CFLAGS=${CFLAGS}"
+	"LDFLAGS=${LDFLAGS}"
 	"uname_S=${CMAKE_SYSTEM_NAME}"
 )
 
